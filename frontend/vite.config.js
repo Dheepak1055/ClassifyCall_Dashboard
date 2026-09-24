@@ -6,12 +6,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 3000,
-    open: true,
+    open: false,
     proxy: {
-      '/api/classify': {
-        target: 'https://apiclassify.zenclass.in',
+      '/api': {
+        target: 'http://localhost:4000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/classify/, ''),
       }
     }
   }

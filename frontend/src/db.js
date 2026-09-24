@@ -32,8 +32,8 @@ const SEED_CALLS = [];
       thumbnail: "https://classifyprod.s3.amazonaws.com/thumbnails/room-p904.jpg"
     },
     media: {
-      recordingUrl: "https://s3.amazonaws.com/classify-recordings/call-104.mp4",
-      transcriptUrl: "https://s3.amazonaws.com/classify-transcripts/call-104.json",
+      recordingUrl: "http://localhost:4000/static/sample_consultation.wav",
+      transcriptUrl: null,
       chats: [
         { from: "BDA (Alice)", text: "Hi Priya, welcome to today's Classify video session!", ts: 10 },
         { from: "Priya Nair", text: "Hi Alice, happy to discuss the Full Stack Web Development bootcamp.", ts: 25 },

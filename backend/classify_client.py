@@ -105,13 +105,15 @@ class ClassifyAuthService:
 auth_service = ClassifyAuthService()
 
 
-def build_join_url(room_id: str, code: str, role: Literal["host", "student"]) -> str:
+def build_join_url(room_id: str, code: str, role: Literal["host", "student"], unique_id: Optional[str] = None) -> str:
     """
-    ASSUMPTION (README §6.2): Classify's response doesn't include a ready
-    join URL, only roomId + hostCode/studentCode. This guesses a pattern
-    from the field names — confirm the real one and replace this function
-    only; every caller goes through here.
+    Builds the joining URL for Classify meets.
+    - Host meet dashboard: https://classify.zenclass.in/meet-dashboard-new?session=<unique_id>
+    - Student guest link: https://classify.zenclass.in/meet/<room_id>?code=<code>&role=student
     """
+    if role == "host":
+        session_id = unique_id or room_id
+        return f"https://classify.zenclass.in/meet-dashboard-new?session={session_id}"
     return f"https://classify.zenclass.in/meet/{room_id}?code={code}&role={role}"
 
 
@@ -140,21 +142,50 @@ async def create_instant_meet(
         raise ValueError("duplicate host emails")
 
     token = await auth_service.get_token()
+    now_s = int(time.time())
+    start_s = now_s + 120
+    end_s = start_s + 3600
+
     payload = {
-        "authToken": token,
-        "product": "guvi",
         "label": label,
-        "meetingType": "instant",
-        "org_id": org_id or CLASSIFY_ORG_ID,
+        "start_time": start_s,
+        "end_time": end_s,
+        "thumbnail": "Default",
+        "minDuration": 1,
+        "batch_data": [],
+        "studentNotes": "",
+        "enable_chat": "on",
+        "authToken": token,
+        "subject": "Default",
+        "message": "Default",
+        "footer": "Default",
         "hosts": [{"name": h.name, "email": h.email} for h in hosts],
-        "autoRecordingStart": auto_recording_start,
-        "studentHMSRole": student_role,
-        "created_by": created_by,
+        "product": "guvi",
+        "created_by": "classify",
+        "recording_autoStart": "on",
+        "isEndTimeGiven": "on",
+        "studentHMSRole": "allow-audio-video-ss",
+        "timezone": "Asia/Kolkata",
+        "org_id": org_id or CLASSIFY_ORG_ID,
+        "meetingType": "open",
+        "repeatSchedule": {"type": "noRepeat"},
+        "guestConfig": {
+            "isGuestParticipantAllowed": True,
+            "guestInformationCollectionFields": []
+        },
+        "isPollEnabled": False,
+        "selectedPollTemplateIds": [],
+        "isQuizEnabled": False,
+        "selectedQuizTemplateIds": [],
+        "breakoutroom_enabled": False,
+        "max_breakoutroom": 0,
+        "enableEarlyStart": False,
+        "earlyStartMinutes": 0
     }
 
     async with httpx.AsyncClient(base_url=CLASSIFY_BASE_URL, timeout=20) as client:
         resp = await client.post(
-            "/createInstantMeet",
+            "/createMS",
             headers={"Authorization-key": CLASSIFY_API_KEY},
             json=payload,
         )
@@ -165,7 +196,7 @@ async def create_instant_meet(
         payload["authToken"] = token
         async with httpx.AsyncClient(base_url=CLASSIFY_BASE_URL, timeout=20) as client:
             resp = await client.post(
-                "/createInstantMeet",
+                "/createMS",
                 headers={"Authorization-key": CLASSIFY_API_KEY},
                 json=payload,
             )

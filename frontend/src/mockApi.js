@@ -117,6 +117,11 @@ export function setupMockApi() {
     // 4. POST /api/calls/schedule
     if (url === "/api/calls/schedule" && method === "post") {
       const body = typeof config.data === "string" ? JSON.parse(config.data) : config.data || {};
+      const uniqueId = `cls-sch-${Date.now()}`;
+      const roomId = `room-${Date.now().toString().slice(-4)}`;
+      const hostCode = `host-${Date.now().toString().slice(-4)}`;
+      const studentCode = `guest-${Date.now().toString().slice(-4)}`;
+
       const createdDbRec = db.insert({
         lead_id: body.lead_id,
         lead_name: body.lead_name,
@@ -125,7 +130,16 @@ export function setupMockApi() {
         scheduled_time: body.scheduled_time,
         call_mode: "scheduled",
         status: "scheduled",
-        classify: null,
+        classify: {
+          uniqueId: uniqueId,
+          roomId: roomId,
+          hostCode: hostCode,
+          studentCode: studentCode,
+          label: `${body.lead_name} - BDA consultation`,
+          thumbnail: `https://classifyprod.s3.amazonaws.com/thumbnails/${roomId}.jpg`,
+          hostJoinUrl: `https://classify.zenclass.in/meet-dashboard-new?session=${uniqueId}`,
+          guestJoinUrl: `https://classify.zenclass.in/meet/${roomId}?code=${studentCode}&role=student`,
+        },
       });
 
       await new Promise((r) => setTimeout(r, 200));
@@ -153,7 +167,7 @@ export function setupMockApi() {
       let classifyData = null;
       if (authToken && callRecord) {
         try {
-          const res = await window.fetch("/api/classify/createInstantMeet", {
+          const res = await window.fetch("/api/classify/createMS", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

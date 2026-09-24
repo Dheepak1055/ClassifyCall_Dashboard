@@ -114,7 +114,7 @@ async def _spin_up_room(call_id: str, user) -> CallRecord:
         await calls_collection.update(call_id, status="failed")
         raise HTTPException(502, f"Could not start the call room: {e}") from e
 
-    host_url = build_join_url(meet.room_id, meet.host_code, "host")
+    host_url = f"https://classify.zenclass.in/meet-dashboard-new?session={meet.unique_id}"
     guest_url = build_join_url(meet.room_id, meet.student_code, "student")
 
     updated = await calls_collection.update(

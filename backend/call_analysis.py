@@ -58,9 +58,14 @@ async def process_completed_call(record) -> None:
         )
         return
 
-    transcript_text = fetch_transcript_text(meet_details["transcripts"])
+    transcript_text = fetch_transcript_text(meet_details.get("transcripts") or [])
     chats = meet_details.get("chats", [])
     recording_url = first_or_none(meet_details.get("recordings", []))
+
+    if not transcript_text.strip() and recording_url:
+        from app.services.whisper_service import whisper_service
+        w_data = await whisper_service.transcribe_url(recording_url)
+        transcript_text = w_data.get("full_text", "")
 
     if not transcript_text.strip():
         await calls_collection.update(
@@ -139,14 +144,32 @@ def first_or_none(items: list) -> str | None:
 
 async def fetch_meet_details(unique_id: str) -> dict:
     """
-    ASSUMPTION: only createInstantMeet is documented in the brief, not a
-    "read a meet back" endpoint — but roomStatusData/recordings/transcripts
-    clearly get filled in after creation, so something like GET /meet/{id}
-    almost certainly exists on Classify's side. Wire this to the real
-    endpoint once confirmed; everything above only depends on this dict's
-    shape (transcripts / chats / recordings / roomStatusData), matching the
-    sample response in the brief.
+    Authoritative Classify read-meet endpoint:
+    POST https://apiclassify.zenclass.in/getMeetDetails
+    Body: {"session": unique_id, "authToken": CLASSIFY_AUTH_TOKEN}
     """
-    raise NotImplementedError(
-        "Point this at Classify's read-meet endpoint once confirmed (see README §6.4)."
-    )
+    import httpx
+    endpoint = f"{settings.CLASSIFY_BASE_URL.rstrip('/')}/getMeetDetails"
+    headers = {
+        "Authorization-key": settings.CLASSIFY_API_KEY.get_secret_value(),
+        "Content-Type": "application/json"
+    }
+    body = {
+        "session": unique_id,
+        "authToken": settings.CLASSIFY_AUTH_TOKEN.get_secret_value()
+    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(endpoint, headers=headers, json=body)
+    if resp.status_code == 200:
+        data = resp.json()
+        if data.get("access"):
+            meet_data = data.get("data", {})
+            return {
+                "unique_id": unique_id,
+                "roomStatusData": meet_data.get("roomStatusData", {}),
+                "transcripts": meet_data.get("transcripts") or [],
+                "recordings": meet_data.get("recordings") or [],
+                "chats": meet_data.get("chats") or [],
+                "raw": data
+            }
+    return {}

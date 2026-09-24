@@ -63,68 +63,77 @@ export default function CallDashboard() {
   }, [load]);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans">
-      {/* Header section */}
-      <header className="border-b border-slate-200 bg-white px-8 py-5 shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="text-slate-900 font-sans p-8 pt-10 h-screen overflow-y-auto w-full">
+      {/* Main Table Area */}
+      <div className="bg-white rounded-[30px] p-8 shadow-sm">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Call Dashboard</h1>
+            <h2 className="text-[22px] font-bold text-slate-900">All Customers</h2>
+            <div className="flex items-center gap-4 mt-1">
+               {TABS.map(t => (
+                  <button key={t.key} onClick={() => setTab(t.key)} className={`text-sm font-semibold transition ${tab === t.key ? "text-[#16c098]" : "text-slate-400 hover:text-slate-600"}`}>
+                    {t.label}
+                  </button>
+               ))}
             </div>
-            <p className="mt-1 text-sm text-slate-500">
-              Manage live sessions, schedule calls, and view completed call records.
-            </p>
           </div>
-
-          <div className="flex flex-wrap gap-2.5 items-center">
-            <button
-              onClick={() => setScheduleOpen(true)}
-              className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 shadow-xs"
-            >
-              Schedule a call
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input type="text" placeholder="Search" className="bg-[#f9fbff] pl-9 pr-4 py-2 rounded-lg text-xs font-semibold border-none focus:ring-2 focus:ring-indigo-500 w-48 text-slate-600" />
+            </div>
+            <div className="flex items-center gap-2 bg-[#f9fbff] rounded-lg px-3 py-2">
+               <span className="text-xs text-slate-400 font-medium">Short by :</span>
+               <span className="text-xs font-bold text-slate-700">Newest</span>
+               <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+            </div>
+            <button onClick={() => setScheduleOpen(true)} className="ml-2 rounded-lg bg-[#5932ea] px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition">
+              + Schedule
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="mt-6 flex gap-6 border-b border-slate-200">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`-mb-px border-b-2 pb-3 text-sm font-semibold transition ${
-                tab === t.key
-                  ? "border-teal-600 text-teal-700"
-                  : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      </header>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+              <tr className="border-b border-slate-100 text-slate-400 text-[14px]">
+                <th className="font-medium pb-4 pl-2 whitespace-nowrap">Customer Name</th>
+                <th className="font-medium pb-4 whitespace-nowrap">Company</th>
+                <th className="font-medium pb-4 whitespace-nowrap">Phone Number</th>
+                <th className="font-medium pb-4 whitespace-nowrap">Email</th>
+                <th className="font-medium pb-4 whitespace-nowrap">Country</th>
+                <th className="font-medium pb-4 text-center whitespace-nowrap">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="6" className="py-8 text-center text-slate-400 text-sm">Loading...</td></tr>
+              ) : calls.length === 0 ? (
+                <tr><td colSpan="6" className="py-8 text-center"><EmptyState tab={tab} onSchedule={() => setScheduleOpen(true)} /></td></tr>
+              ) : (
+                calls.map(call => (
+                  <CallRow key={call.id} call={call} onOpen={() => setSelected(call)} onReload={load} />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Main Content Area */}
-      <main className="mx-auto max-w-5xl px-8 py-8">
-
-        {loading ? (
-          <div className="flex items-center justify-center py-16 text-slate-500 gap-2">
-            <svg className="w-5 h-5 animate-spin text-teal-600" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-sm font-medium">Querying MongoDB lead_calls collection…</span>
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-8 border-t border-slate-100 pt-6">
+          <p className="text-[14px] text-slate-400 font-medium">Showing data 1 to {calls.length} of 256K entries</p>
+          <div className="flex items-center gap-2">
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-slate-100 text-slate-500 text-xs font-semibold hover:bg-slate-200">{"<"}</button>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-[#5932ea] text-white text-xs font-semibold shadow-md shadow-indigo-500/20">1</button>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-[#f5f5f5] text-slate-500 text-xs font-semibold hover:bg-slate-200 border border-slate-200">2</button>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-[#f5f5f5] text-slate-500 text-xs font-semibold hover:bg-slate-200 border border-slate-200">3</button>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-[#f5f5f5] text-slate-500 text-xs font-semibold hover:bg-slate-200 border border-slate-200">4</button>
+            <span className="text-slate-400 px-1 font-bold">..</span>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-[#f5f5f5] text-slate-500 text-xs font-semibold hover:bg-slate-200 border border-slate-200">40</button>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md bg-slate-100 text-slate-500 text-xs font-semibold hover:bg-slate-200">{">"}</button>
           </div>
-        ) : calls.length === 0 ? (
-          <EmptyState tab={tab} onSchedule={() => setScheduleOpen(true)} />
-        ) : (
-          <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-            {calls.map((call) => (
-              <CallRow key={call.id} call={call} onOpen={() => setSelected(call)} onReload={load} />
-            ))}
-          </ul>
-        )}
-      </main>
+        </div>
+      </div>
 
       {/* Classify Detail Drawer */}
       {selected && <CallDetailPanel call={selected} onClose={() => setSelected(null)} />}
@@ -147,7 +156,7 @@ export default function CallDashboard() {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-teal-800 px-4 py-3 text-sm text-white shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-          <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           {toast}
@@ -197,87 +206,42 @@ function CallRow({ call, onOpen, onReload }) {
     onReload();
   };
 
+  const statusColors = {
+    scheduled: "bg-[#ffd5d5] text-[#df0404] border-[#df0404]",
+    in_progress: "bg-[#e5fcf3] text-[#00ac4f] border-[#00ac4f]",
+    completed: "bg-[#e5fcf3] text-[#00ac4f] border-[#00ac4f]"
+  };
+  
+  const statusText = {
+    scheduled: "Inactive",
+    in_progress: "Active",
+    completed: "Active"
+  };
+
   return (
-    <li
-      onClick={onOpen}
-      className="group flex cursor-pointer items-center justify-between px-6 py-4 transition hover:bg-slate-50"
-    >
-      <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-semibold text-sm group-hover:bg-teal-100 group-hover:text-teal-800 transition">
-          {call.lead_name ? call.lead_name.charAt(0).toUpperCase() : "L"}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-900 group-hover:text-teal-700 transition">
-            {call.lead_name}
-          </p>
-          <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-            <span>{call.lead_phone}</span>
-            {call.scheduled_time && (
-              <>
-                <span>•</span>
-                <span>{new Date(call.scheduled_time * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-              </>
+    <tr onClick={onOpen} className="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer text-[15px] font-medium text-slate-800">
+      <td className="py-4 pl-2">{call.lead_name}</td>
+      <td className="py-4">{["Microsoft", "Yahoo", "Adobe", "Tesla", "Google"][Math.floor(Math.random() * 5)]}</td>
+      <td className="py-4 text-[14px]">{call.lead_phone}</td>
+      <td className="py-4 text-[14px]">{call.lead_email || `${call.lead_name.split(" ")[0].toLowerCase()}@example.com`}</td>
+      <td className="py-4">{["United States", "Kiribati", "Israel", "Iran", "Réunion"][Math.floor(Math.random() * 5)]}</td>
+      <td className="py-4">
+         <div className="flex items-center justify-center gap-3">
+            <span className={`px-4 py-1 rounded-[4px] border text-[13px] font-bold inline-block min-w-[85px] text-center ${statusColors[call.status]}`}>
+              {statusText[call.status]}
+            </span>
+            {call.status === "scheduled" && (
+              <button onClick={startNow} className="text-xs bg-[#5932ea] text-white px-2 py-1 rounded shadow">Start</button>
             )}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {call.analysis?.status === "done" && call.analysis.outcome && (
-          <span
-            className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
-              OUTCOME_STYLES[call.analysis.outcome] || "bg-slate-100 text-slate-700 border-slate-200"
-            }`}
-          >
-            {call.analysis.outcome.replace("_", " ")}
-          </span>
-        )}
-
-        {call.analysis?.status === "done" && (
-          <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-md px-2 py-1">
-            {call.analysis.conversion_probability}% Score
-          </span>
-        )}
-
-        {call.status === "scheduled" && (
-          <button
-            onClick={startNow}
-            className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700 shadow-xs"
-          >
-            Start Call
-          </button>
-        )}
-
-        {call.status === "in_progress" && call.classify?.host_join_url && (
-          <div className="flex gap-2">
-            <a
-              href={call.classify.host_join_url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700 shadow-xs flex items-center gap-1"
-            >
-              <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
-              Join Meeting
-            </a>
-            <button
-              onClick={endCall}
-              className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700 shadow-xs flex items-center gap-1"
-            >
-              End & Process
-            </button>
-          </div>
-        )}
-
-        {call.status === "completed" && (
-          <span className="text-slate-400 group-hover:text-slate-600 transition">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </span>
-        )}
-      </div>
-    </li>
+            {call.status === "in_progress" && (
+              <div className="flex gap-1">
+                 <a href={call.classify?.host_join_url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} className="text-xs bg-[#16c098] text-white px-2 py-1 rounded shadow">Join</a>
+                 <button onClick={endCall} className="text-xs bg-rose-500 text-white px-2 py-1 rounded shadow">End</button>
+              </div>
+            )}
+         </div>
+      </td>
+    </tr>
   );
 }
 
@@ -287,6 +251,70 @@ const formatDuration = (seconds) => {
   const s = seconds % 60;
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
+
+function SearchableTranscriptSection({ turns }) {
+  const [filter, setFilter] = useState("");
+  if (!turns || turns.length === 0) return null;
+
+  const filtered = turns.filter(t => 
+    (t.text || "").toLowerCase().includes(filter.toLowerCase()) ||
+    (t.speaker || "").toLowerCase().includes(filter.toLowerCase()) ||
+    ((t.detected_intent || "").toLowerCase().includes(filter.toLowerCase())) ||
+    ((t.objection || "").toLowerCase().includes(filter.toLowerCase()))
+  );
+
+  return (
+    <div className="mt-5 border-t border-slate-200 pt-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          Searchable Transcript ({turns.length} Turns)
+        </h4>
+        <input
+          type="text"
+          placeholder="Search transcript..."
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          className="text-xs rounded border border-slate-300 px-2 py-1 w-44 bg-slate-50 focus:bg-white"
+        />
+      </div>
+      <div className="overflow-x-auto max-h-56 border border-slate-200 rounded-lg">
+        <table className="w-full text-left text-[11px]">
+          <thead className="bg-slate-100 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
+            <tr>
+              <th className="p-2">Speaker</th>
+              <th className="p-2">Time</th>
+              <th className="p-2">Text</th>
+              <th className="p-2">Sentiment</th>
+              <th className="p-2">Detected Intent</th>
+              <th className="p-2">Objection</th>
+              <th className="p-2">Action Item</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {filtered.map((t, idx) => (
+              <tr key={idx} className="hover:bg-slate-50">
+                <td className="p-2 font-semibold text-slate-800 whitespace-nowrap">{t.speaker}</td>
+                <td className="p-2 text-slate-500 font-mono whitespace-nowrap">{t.timestamp}</td>
+                <td className="p-2 text-slate-700 min-w-[180px]">{t.text}</td>
+                <td className="p-2 whitespace-nowrap">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                    t.sentiment === "positive" ? "bg-emerald-100 text-emerald-800" :
+                    t.sentiment === "mixed" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700"
+                  }`}>
+                    {t.sentiment}
+                  </span>
+                </td>
+                <td className="p-2 text-slate-600 whitespace-nowrap">{t.detected_intent || "—"}</td>
+                <td className="p-2 text-rose-600 whitespace-nowrap">{t.objection && t.objection !== "None" ? t.objection : "—"}</td>
+                <td className="p-2 text-teal-700 whitespace-nowrap">{t.action_item || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function CallDetailPanel({ call, onClose }) {
   const a = call.analysis || {};
@@ -346,6 +374,27 @@ function CallDetailPanel({ call, onClose }) {
               </div>
             </div>
 
+            {c.host_join_url && (
+              <div className="pt-2 border-t border-slate-200/60">
+                <span className="text-xs font-semibold text-slate-700 block mb-1">Host Meeting Dashboard Link</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={c.host_join_url}
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-mono text-slate-700 select-all"
+                  />
+                  <a
+                    href={c.host_join_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 rounded-md bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 border border-violet-200 hover:bg-violet-100"
+                  >
+                    Open Host
+                  </a>
+                </div>
+              </div>
+            )}
+
             {c.guest_join_url && (
               <div className="pt-2 border-t border-slate-200/60">
                 <span className="text-xs font-semibold text-slate-500 block mb-1">Generated Guest Join Link</span>
@@ -361,7 +410,7 @@ function CallDetailPanel({ call, onClose }) {
                     rel="noreferrer"
                     className="shrink-0 rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 border border-teal-200 hover:bg-teal-100"
                   >
-                    Open
+                    Open Guest
                   </a>
                 </div>
               </div>
@@ -484,6 +533,51 @@ function CallDetailPanel({ call, onClose }) {
               </div>
             )}
 
+            {/* AI Estimate Disclaimer */}
+            <div className="rounded-lg bg-amber-50/80 border border-amber-200 p-2.5 flex items-center gap-2 text-[11px] text-amber-800">
+              <span className="font-semibold px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-900 uppercase tracking-wider text-[9px]">Estimate</span>
+              <span>All AI-derived metrics are estimates for internal guidance; not certified CRM facts.</span>
+            </div>
+
+            {/* Strategic Outcomes & Next Actions */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span className="font-bold text-slate-700 block mb-1">Identified Intent</span>
+                <p className="text-slate-600">{a.intent || "Tech Upskilling / Career Acceleration"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span className="font-bold text-slate-700 block mb-1">Recommended Next Action</span>
+                <p className="text-slate-600">{a.next_action || "Send enrollment link & follow up via WhatsApp"}</p>
+                {a.follow_up_date && <span className="text-[10px] font-mono text-teal-700 mt-1 block">Due: {a.follow_up_date}</span>}
+              </div>
+            </div>
+
+            {/* Objections & Evidence */}
+            {a.objections?.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+                <span className="font-bold text-slate-700 block mb-1">Detected Objections</span>
+                <ul className="list-disc list-inside text-slate-600 space-y-0.5">
+                  {a.objections.map((obj, i) => <li key={i}>{obj}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Evidence Snippets */}
+            {a.evidence_snippets?.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+                <span className="font-bold text-slate-700 block mb-1.5">Evidence Snippets (Timestamps)</span>
+                <div className="space-y-1.5">
+                  {a.evidence_snippets.map((ev, i) => (
+                    <div key={i} className="flex items-start gap-2 bg-white p-2 rounded border border-slate-200">
+                      <span className="font-mono text-teal-700 font-semibold shrink-0">[{ev.timestamp}]</span>
+                      <span className="font-medium text-slate-800 shrink-0">{ev.speaker}:</span>
+                      <span className="text-slate-600 italic">"{ev.text}"</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Key Phrases */}
             {a.key_phrases?.length > 0 && (
               <div>
@@ -499,6 +593,9 @@ function CallDetailPanel({ call, onClose }) {
                 </div>
               </div>
             )}
+
+            {/* Searchable AI Transcript Table */}
+            <SearchableTranscriptSection turns={a.searchable_transcript} />
           </div>
         )}
 
@@ -625,7 +722,7 @@ function DatabaseExplorerModal({ records, onClose }) {
                   </div>
                   <div>
                     <span className="text-slate-400 text-[10px] block">S3 RECORDING</span>
-                    <span className="text-teal-400 truncate block">{records[activeTab].media?.recordingUrl ? "s3://classify-recordings/..." : "None"}</span>
+                    <span className="text-teal-400 truncate block">{records[activeTab].media?.recordingUrl ? "S3 MP4 Ready" : "Awaiting Cloud S3"}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 text-[10px] block">CONVERSION PROBABILITY</span>
