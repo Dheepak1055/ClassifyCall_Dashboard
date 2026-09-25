@@ -58,15 +58,19 @@ export function setupMockApi() {
 
     // 1. GET /api/calls?status={tab}
     if (url.startsWith("/api/calls") && method === "get") {
-      let status = "scheduled";
+      let status = null;
       if (config.params && config.params.status) {
         status = config.params.status;
       } else {
-        const urlObj = new URL(url, "http://localhost:3000");
-        status = urlObj.searchParams.get("status") || "scheduled";
+        try {
+          const urlObj = new URL(url, "http://localhost:3000");
+          status = urlObj.searchParams.get("status");
+        } catch (_) {
+          status = null;
+        }
       }
 
-      const dbRecords = db.find({ status });
+      const dbRecords = (status && status !== "all") ? db.find({ status }) : db.getCollection();
       const callsList = dbRecords.map(mapDbRecordToCall);
 
       await new Promise((r) => setTimeout(r, 150));
@@ -137,7 +141,7 @@ export function setupMockApi() {
           studentCode: studentCode,
           label: `${body.lead_name} - BDA consultation`,
           thumbnail: `https://classifyprod.s3.amazonaws.com/thumbnails/${roomId}.jpg`,
-          hostJoinUrl: `https://classify.zenclass.in/meet-dashboard-new?session=${uniqueId}`,
+          hostJoinUrl: `https://classify.zenclass.in/meet/${roomId}?code=${hostCode}&role=host`,
           guestJoinUrl: `https://classify.zenclass.in/meet/${roomId}?code=${studentCode}&role=student`,
         },
       });
@@ -203,8 +207,8 @@ export function setupMockApi() {
                  hostCode: d.hostCode,
                  studentCode: d.studentCode,
                  label: d.label,
-                 hostJoinUrl: `https://classify.zenclass.in/meet/${d.roomId}?code=${d.hostCode}&role=host`,
-                 guestJoinUrl: `https://classify.zenclass.in/meet/${d.roomId}?code=${d.studentCode}&role=student`
+                 hostJoinUrl: `https://classify.zenclass.in/meet-dashboard-new?session=${d.uniqueId}`,
+                 guestJoinUrl: `https://classify.zenclass.in/meet-dashboard-new?session=${d.uniqueId}`
                };
             }
           }
@@ -214,14 +218,15 @@ export function setupMockApi() {
       }
       
       if (!classifyData) {
+        const uniqueId = `cls-uuid-${Date.now()}`;
         classifyData = {
-          uniqueId: `cls-uuid-${Date.now()}`,
+          uniqueId: uniqueId,
           roomId: `room-${callId}`,
           hostCode: `host-${callId}`,
           studentCode: `guest-${callId}`,
           label: `Live Meeting ${callId}`,
-          hostJoinUrl: `https://classify.zenclass.in/meet/room-${callId}?code=host-${callId}&role=host`,
-          guestJoinUrl: `https://classify.zenclass.in/meet/room-${callId}?code=guest-${callId}&role=student`,
+          hostJoinUrl: `https://classify.zenclass.in/meet-dashboard-new?session=${uniqueId}`,
+          guestJoinUrl: `https://classify.zenclass.in/meet-dashboard-new?session=${uniqueId}`,
         };
       }
 
@@ -280,6 +285,30 @@ export function setupMockApi() {
       await new Promise((r) => setTimeout(r, 400));
       return {
         data: { success: true },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+      };
+    }
+
+    // 7. POST /api/calls/:id/sync-assets
+    const syncMatch = url.match(/\/api\/calls\/([^/]+)\/sync-assets/);
+    if (syncMatch && method === "post") {
+      const callId = syncMatch[1];
+      const callRecord = db.findById(callId);
+      if (callRecord) {
+        db.update(callId, {
+          media: {
+            recordingUrl: callRecord.media?.recordingUrl || "http://localhost:4000/static/sample_consultation.wav",
+            transcriptUrl: callRecord.media?.transcriptUrl || null,
+            chats: callRecord.media?.chats || []
+          }
+        });
+      }
+      const updated = db.findById(callId);
+      return {
+        data: updated ? mapDbRecordToCall(updated) : { success: true },
         status: 200,
         statusText: "OK",
         headers: {},

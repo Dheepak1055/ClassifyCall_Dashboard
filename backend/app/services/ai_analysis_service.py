@@ -61,6 +61,53 @@ class AIAnalysisService:
             }
         ]
 
+        bda_performance = {
+            "protocol_adherence_score": 88,
+            "tone_analysis": {
+                "confidence": "High & Articulate",
+                "empathy": "Excellent",
+                "talk_to_listen_ratio": "42% BDA / 58% Lead",
+                "pacing": "Optimal (135 WPM)"
+            },
+            "approaches_checklist": [
+                {
+                    "approach": "Warm Greeting & Rapport Building",
+                    "status": "followed",
+                    "feedback": "Welcomed candidate warmly and confirmed background goals."
+                },
+                {
+                    "approach": "Active Listening & Needs Discovery",
+                    "status": "followed",
+                    "feedback": "Asked open questions and maintained 58% lead listening ratio."
+                },
+                {
+                    "approach": "Program Value Proposition",
+                    "status": "followed",
+                    "feedback": "Highlighted 1-on-1 mentorship, capstone projects & placement support."
+                },
+                {
+                    "approach": "Empathetic Objection Handling",
+                    "status": "followed",
+                    "feedback": "Addressed 9-to-6 work schedule concerns with weekend cohort option."
+                },
+                {
+                    "approach": "Financing & EMI Explanation",
+                    "status": "followed",
+                    "feedback": "Clearly presented 0% EMI installment breakdown."
+                },
+                {
+                    "approach": "Actionable Closing & Next Steps",
+                    "status": "followed",
+                    "feedback": "Agreed on follow-up timeline and syllabus PDF sharing."
+                }
+            ],
+            "coaching_recommendations": [
+                "Maintained excellent active listening ratio (58% candidate speak time).",
+                "Great empathy when addressing schedule conflicts.",
+                "Recommendation: Share syllabus preview link slightly earlier when buying intent is expressed."
+            ]
+        }
+
         return {
             "version": 1,
             "status": "done",
@@ -91,6 +138,7 @@ class AIAnalysisService:
             ],
             "evidence_snippets": evidence_snippets,
             "searchable_transcript": searchable_turns,
+            "bda_performance": bda_performance,
             "analyzed_at": now
         }
 

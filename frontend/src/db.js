@@ -27,8 +27,8 @@ const SEED_CALLS = [];
       hostCode: "host-code-104",
       studentCode: "guest-code-104",
       label: "Call with Priya Nair — Alice",
-      hostJoinUrl: "https://classify.zenclass.in/meet/room-p904?code=host-code-104&role=host",
-      guestJoinUrl: "https://classify.zenclass.in/meet/room-p904?code=guest-code-104&role=student",
+      hostJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-904128",
+      guestJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-904128",
       thumbnail: "https://classifyprod.s3.amazonaws.com/thumbnails/room-p904.jpg"
     },
     media: {
@@ -88,8 +88,8 @@ const SEED_CALLS = [];
       hostCode: "host-code-105",
       studentCode: "guest-code-105",
       label: "Call with Siddharth Malhotra — Alice",
-      hostJoinUrl: "https://classify.zenclass.in/meet/room-s505?code=host-code-105&role=host",
-      guestJoinUrl: "https://classify.zenclass.in/meet/room-s505?code=guest-code-105&role=student"
+      hostJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-505291",
+      guestJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-505291"
     },
     media: {
       recordingUrl: "https://s3.amazonaws.com/classify-recordings/call-105.mp4",
@@ -145,8 +145,8 @@ const SEED_CALLS = [];
       hostCode: "host-code-281",
       studentCode: "guest-code-281",
       label: "Instant Call with Vikram Patel",
-      hostJoinUrl: "https://classify.zenclass.in/meet/room-v281?code=host-code-281&role=host",
-      guestJoinUrl: "https://classify.zenclass.in/meet/room-v281?code=guest-code-281&role=student"
+      hostJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-281099",
+      guestJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-281099"
     },
     media: {
       recordingUrl: null,
@@ -249,15 +249,14 @@ class LeadCallsDB {
       scheduledTime: recordData.scheduledTime || recordData.scheduled_time || Math.floor(Date.now() / 1000),
       startedAt: recordData.status === "in_progress" ? Math.floor(Date.now() / 1000) : null,
       endedAt: null,
-      isActive: true,
       classify: recordData.classify || {
         uniqueId: `cls-uuid-${Math.floor(Math.random() * 899999 + 100000)}`,
         roomId: `room-inst-${Math.floor(Math.random() * 899 + 100)}`,
         hostCode: `host-${Math.floor(Math.random() * 8999 + 1000)}`,
         studentCode: `guest-${Math.floor(Math.random() * 8999 + 1000)}`,
         label: `Instant Call with ${recordData.leadName || recordData.lead_name}`,
-        hostJoinUrl: "https://classify.zenclass.in/meet/instant?role=host",
-        guestJoinUrl: "https://classify.zenclass.in/meet/instant?role=student",
+        hostJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-inst",
+        guestJoinUrl: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-inst",
       },
       media: { recordingUrl: null, transcriptUrl: null, chats: [] },
       analysis: { status: "pending" },

@@ -31,9 +31,13 @@ const DEFAULT_SEED_CALLS = [
       label: "Aarav Sharma - BDA consultation",
       thumbnail: "Default",
       host_join_url: "https://classify.zenclass.in/meet-dashboard-new?session=08320032-aa91-4657-9230-d535e3ac92a9",
-      guest_join_url: "https://classify.zenclass.in/meet/6ab4c555c42bb32b75d3107b?code=dgm-ebls-cur&role=student",
+      guest_join_url: "https://classify.zenclass.in/meet-dashboard-new?session=08320032-aa91-4657-9230-d535e3ac92a9",
       host_code: "nva-nnyi-rhi",
       student_code: "dgm-ebls-cur",
+    },
+    media: {
+      recording_url: "http://localhost:4000/static/sample_consultation.wav",
+      transcript_url: null,
     },
     analysis: {
       status: "pending",
@@ -68,7 +72,7 @@ const DEFAULT_SEED_CALLS = [
       label: "Priya Nair - BDA consultation",
       thumbnail: "https://classifyprod.s3.amazonaws.com/thumbnails/room-p904.jpg",
       host_join_url: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-904128",
-      guest_join_url: "https://classify.zenclass.in/meet/room-p904?code=guest-code-104&role=student",
+      guest_join_url: "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-904128",
       host_code: "host-code-104",
       student_code: "guest-code-104",
     },
@@ -90,6 +94,28 @@ const DEFAULT_SEED_CALLS = [
       follow_up_date: "2026-09-26",
       key_phrases: ["Full Stack Web Dev", "EMI installment options", "Career placement support", "Weekend batch flexibility"],
       is_estimate: true,
+      bda_performance: {
+        protocol_adherence_score: 92,
+        tone_analysis: {
+          confidence: "High & Professional",
+          empathy: "Excellent",
+          talk_to_listen_ratio: "42% BDA / 58% Lead",
+          pacing: "Optimal (132 WPM)"
+        },
+        approaches_checklist: [
+          { approach: "Warm Greeting & Rapport Building", status: "followed", feedback: "Welcomed lead warmly and identified career background." },
+          { approach: "Active Listening & Needs Discovery", status: "followed", feedback: "Asked open questions and maintained 58% lead listening ratio." },
+          { approach: "Program Value Proposition", status: "followed", feedback: "Highlighted 1-on-1 mentorship, capstone projects & placement support." },
+          { approach: "Empathetic Objection Handling", status: "followed", feedback: "Addressed 9-to-6 work schedule concerns with weekend cohort option." },
+          { approach: "Financing & EMI Explanation", status: "followed", feedback: "Clearly presented 0% EMI installment breakdown." },
+          { approach: "Actionable Closing & Next Steps", status: "followed", feedback: "Agreed on follow-up timeline and syllabus PDF sharing." }
+        ],
+        coaching_recommendations: [
+          "Maintained ideal active listening ratio (58% candidate speak time).",
+          "Great empathy when addressing schedule conflicts.",
+          "Recommendation: Share syllabus preview link slightly earlier when buying intent is expressed."
+        ]
+      }
     },
     created_at: Math.floor(Date.now() / 1000) - 86400,
   },
@@ -115,9 +141,13 @@ const DEFAULT_SEED_CALLS = [
       label: "Rohan Gupta - BDA consultation",
       thumbnail: "https://classifyprod.s3.amazonaws.com/thumbnails/room-rohan.jpg",
       host_join_url: "https://classify.zenclass.in/meet-dashboard-new?session=cls-rohan-552",
-      guest_join_url: "https://classify.zenclass.in/meet/room-rohan-552?code=guest-552&role=student",
+      guest_join_url: "https://classify.zenclass.in/meet-dashboard-new?session=cls-rohan-552",
       host_code: "host-552",
       student_code: "guest-552",
+    },
+    media: {
+      recording_url: "http://localhost:4000/static/sample_consultation.wav",
+      transcript_url: null,
     },
     analysis: {
       status: "pending",
@@ -154,6 +184,13 @@ export default function App() {
 
   useEffect(() => {
     loadCalls();
+    const pollId = setInterval(() => {
+      // Only refresh while the tab is visible; skip when backgrounded.
+      if (document.visibilityState === "visible") {
+        loadCalls();
+      }
+    }, 15000);
+    return () => clearInterval(pollId);
   }, [loadCalls]);
 
   const showToast = (msg) => {
@@ -213,21 +250,7 @@ export default function App() {
             setSelectedCall(call);
             setCurrentTab("insights");
           }}
-          onNavigateToLeads={() => setCurrentTab("leads")}
-        />
-      )}
-
-      {/* Tab: Leads */}
-      {currentTab === "leads" && (
-        <LeadsPage
-          calls={calls}
-          onScheduleClick={() => setScheduleModalOpen(true)}
-          onSelectCall={(call) => {
-            setSelectedCall(call);
-            setCurrentTab("insights");
-          }}
-          onStartCall={handleStartCall}
-          onEndCall={handleEndCall}
+          onNavigateToLeads={() => setCurrentTab("scheduled")}
         />
       )}
 
@@ -262,38 +285,60 @@ export default function App() {
             <p className="text-xs text-slate-500 mt-1">Browse all media and Zenclass transcript documents saved from completed calls.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {calls.map((c) => (
-              <div key={c.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900 text-sm">{c.lead_name}</h3>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">MP4 Ready</span>
-                </div>
-                <p className="text-xs text-slate-500">Room: {c.classify?.room_id || "room-p904"} · 22 mins</p>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <button
-                    onClick={() => {
-                      setSelectedCall(c);
-                      setCurrentTab("insights");
-                    }}
-                    className="text-violet-600 font-bold hover:underline"
-                  >
-                    Open Intelligence →
-                  </button>
-                  {c.media?.recording_url ? (
-                    <a
-                      href={c.media.recording_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-slate-600 hover:text-slate-900 font-semibold"
-                    >
-                      Download S3
-                    </a>
+            {calls.map((c) => {
+              const recUrl = c.media?.recording_url;
+              return (
+                <div key={c.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 text-sm">{c.lead_name}</h3>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${recUrl ? "text-emerald-700 bg-emerald-50" : "text-amber-700 bg-amber-50"}`}>
+                      {recUrl ? "MP4 Ready" : "S3 Processing"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Room: {c.classify?.room_id || "room-p904"} · 22 mins</p>
+                  
+                  {/* Embedded Media Player Widget */}
+                  {recUrl ? (
+                    <div className="pt-2">
+                      <audio controls className="w-full h-8 rounded-lg bg-slate-100" src={recUrl}>
+                        Your browser does not support audio playback.
+                      </audio>
+                    </div>
                   ) : (
-                    <span className="text-slate-400 text-xs italic">S3 Pending</span>
+                    <div className="p-3 bg-slate-50 rounded-xl text-center text-xs text-slate-400 italic">
+                      ⏳ Cloud Beam recording encoding in progress...
+                    </div>
                   )}
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <button
+                      onClick={() => {
+                        setSelectedCall(c);
+                        setCurrentTab("insights");
+                      }}
+                      className="text-violet-600 font-bold hover:underline"
+                    >
+                      Open Intelligence →
+                    </button>
+                    {recUrl ? (
+                      <a
+                        href={recUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1"
+                      >
+                        <span>Download S3</span>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span className="text-slate-400 text-xs italic">S3 Pending</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

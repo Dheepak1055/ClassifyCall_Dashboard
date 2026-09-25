@@ -400,3 +400,13 @@ async def transcribe_call_endpoint(call_id: str, request: Request, user: BDAUser
     )
     return _format_frontend_record(updated)
 
+
+@router.delete("/{call_id}")
+async def delete_call_endpoint(call_id: str, user: BDAUser = Depends(get_current_user)):
+    """Deletes a call record from the persistent store."""
+    success = store.delete_call(call_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Call not found")
+    return {"success": True, "deleted_id": call_id}
+
+

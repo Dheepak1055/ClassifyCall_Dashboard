@@ -26,7 +26,7 @@ INITIAL_CALLS = [
             "label": "Aarav Sharma - BDA consultation",
             "thumbnail": "Default",
             "host_join_url": "https://classify.zenclass.in/meet-dashboard-new?session=08320032-aa91-4657-9230-d535e3ac92a9",
-            "guest_join_url": "https://classify.zenclass.in/meet/6ab4c555c42bb32b75d3107b?code=dgm-ebls-cur&role=student",
+            "guest_join_url": "https://classify.zenclass.in/meet-dashboard-new?session=08320032-aa91-4657-9230-d535e3ac92a9",
             "host_code": "nva-nnyi-rhi",
             "student_code": "dgm-ebls-cur"
         },
@@ -71,7 +71,7 @@ INITIAL_CALLS = [
             "label": "Priya Nair - BDA consultation",
             "thumbnail": "https://classifyprod.s3.amazonaws.com/thumbnails/room-p904.jpg",
             "host_join_url": "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-904128",
-            "guest_join_url": "https://classify.zenclass.in/meet/room-p904?code=guest-code-104&role=student",
+            "guest_join_url": "https://classify.zenclass.in/meet-dashboard-new?session=cls-uuid-904128",
             "host_code": "host-code-104",
             "student_code": "guest-code-104"
         },
@@ -122,10 +122,42 @@ INITIAL_CALLS = [
 ]
 
 
+import json
+import os
+
+DB_FILE_PATH = os.path.join(os.path.dirname(__file__), "calls_db.json")
+
 class Store:
     def __init__(self):
-        self._calls: Dict[str, dict] = {c["id"]: deepcopy(c) for c in INITIAL_CALLS}
+        self._db_file = DB_FILE_PATH
+        self._calls: Dict[str, dict] = {}
         self._audit_logs: List[dict] = []
+        self._load_from_disk()
+
+    def _load_from_disk(self):
+        if os.path.exists(self._db_file):
+            try:
+                with open(self._db_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        self._calls = {c["id"]: c for c in data if "id" in c}
+                        return
+                    elif isinstance(data, dict):
+                        self._calls = data
+                        return
+            except Exception as e:
+                print(f"[Store] Warning: Failed to load calls_db.json ({e}), initializing with seed data")
+        
+        # Fallback to initial seed data
+        self._calls = {c["id"]: deepcopy(c) for c in INITIAL_CALLS}
+        self._save_to_disk()
+
+    def _save_to_disk(self):
+        try:
+            with open(self._db_file, "w", encoding="utf-8") as f:
+                json.dump(list(self._calls.values()), f, indent=2)
+        except Exception as e:
+            print(f"[Store] Error saving calls_db.json: {e}")
 
     def get_call(self, call_id: str) -> Optional[dict]:
         call = self._calls.get(call_id)
@@ -179,6 +211,7 @@ class Store:
             "updated_at": now
         }
         self._calls[call_id] = doc
+        self._save_to_disk()
         return deepcopy(doc)
 
     def update_call(self, call_id: str, **fields) -> Optional[dict]:
@@ -186,7 +219,15 @@ class Store:
             return None
         self._calls[call_id].update(fields)
         self._calls[call_id]["updated_at"] = int(time.time())
+        self._save_to_disk()
         return deepcopy(self._calls[call_id])
+
+    def delete_call(self, call_id: str) -> bool:
+        if call_id in self._calls:
+            del self._calls[call_id]
+            self._save_to_disk()
+            return True
+        return False
 
     def log_audit(self, action: str, correlation_id: str, user_email: str, details: Any):
         self._audit_logs.append({
@@ -203,3 +244,4 @@ class Store:
 
 
 store = Store()
+

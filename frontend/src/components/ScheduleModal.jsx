@@ -68,15 +68,15 @@ export default function ScheduleModal({ isOpen, onClose, onCreated, preselectedL
 
   const hostJoinUrl =
     confirmedCall?.classify?.host_join_url ||
-    (confirmedCall?.classify?.unique_id
-      ? `https://classify.zenclass.in/meet-dashboard-new?session=${confirmedCall.classify.unique_id}`
-      : `https://classify.zenclass.in/meet-dashboard-new?session=${confirmedCall?.id || "cls-room"}`);
+    (confirmedCall?.classify?.room_id && confirmedCall?.classify?.host_code
+      ? `https://classify.zenclass.in/meet/${confirmedCall.classify.room_id}?code=${confirmedCall.classify.host_code}&role=host`
+      : `https://classify.zenclass.in/meet-dashboard-new?session=${confirmedCall?.classify?.unique_id || confirmedCall?.id || "cls-room"}`);
 
   const studentJoinUrl =
     confirmedCall?.classify?.guest_join_url ||
-    (confirmedCall?.classify?.room_id
-      ? `https://classify.zenclass.in/meet/${confirmedCall.classify.room_id}?code=${confirmedCall.classify.student_code || "student"}&role=student`
-      : `https://classify.zenclass.in/meet/${confirmedCall?.id || "room"}?role=student`);
+    (confirmedCall?.classify?.room_id && confirmedCall?.classify?.student_code
+      ? `https://classify.zenclass.in/meet/${confirmedCall.classify.room_id}?code=${confirmedCall.classify.student_code}&role=student`
+      : `https://classify.zenclass.in/meet-dashboard-new?session=${confirmedCall?.classify?.unique_id || confirmedCall?.id || "cls-room"}`);
 
   const copyHostLink = () => {
     navigator.clipboard.writeText(hostJoinUrl);

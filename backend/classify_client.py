@@ -108,13 +108,13 @@ auth_service = ClassifyAuthService()
 def build_join_url(room_id: str, code: str, role: Literal["host", "student"], unique_id: Optional[str] = None) -> str:
     """
     Builds the joining URL for Classify meets.
-    - Host meet dashboard: https://classify.zenclass.in/meet-dashboard-new?session=<unique_id>
+    - Host meet URL: https://classify.zenclass.in/meet/<room_id>?code=<code>&role=host
     - Student guest link: https://classify.zenclass.in/meet/<room_id>?code=<code>&role=student
     """
-    if role == "host":
-        session_id = unique_id or room_id
-        return f"https://classify.zenclass.in/meet-dashboard-new?session={session_id}"
-    return f"https://classify.zenclass.in/meet/{room_id}?code={code}&role={role}"
+    if room_id and code:
+        return f"https://classify.zenclass.in/meet/{room_id}?code={code}&role={role}"
+    session_id = unique_id or room_id
+    return f"https://classify.zenclass.in/meet-dashboard-new?session={session_id}"
 
 
 async def create_instant_meet(

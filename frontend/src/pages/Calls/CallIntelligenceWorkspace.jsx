@@ -40,82 +40,23 @@ export default function CallIntelligenceWorkspace({
 
   const hostJoinUrl =
     c.host_join_url ||
-    (c.unique_id
-      ? `https://classify.zenclass.in/meet-dashboard-new?session=${c.unique_id}`
-      : `https://classify.zenclass.in/meet-dashboard-new?session=${call.id}`);
+    (c.room_id && c.host_code
+      ? `https://classify.zenclass.in/meet/${c.room_id}?code=${c.host_code}&role=host`
+      : `https://classify.zenclass.in/meet-dashboard-new?session=${c.unique_id || call.id}`);
 
   const studentJoinUrl =
     c.guest_join_url ||
-    (c.room_id
-      ? `https://classify.zenclass.in/meet/${c.room_id}?code=${c.student_code || "student"}&role=student`
-      : `https://classify.zenclass.in/meet/${call.id}?role=student`);
+    (c.room_id && c.student_code
+      ? `https://classify.zenclass.in/meet/${c.room_id}?code=${c.student_code}&role=student`
+      : `https://classify.zenclass.in/meet-dashboard-new?session=${c.unique_id || call.id}`);
 
-  // Formatted transcript turns
-  const turns = a.searchable_transcript || [
-    {
-      timestamp: "00:05",
-      speaker: "BDA (Dheepak)",
-      text: "Hello! Welcome to your HCL GUVI career counseling session. How can I assist you with your tech transition?",
-      sentiment: "positive",
-      detected_intent: "Greeting & Rapport",
-      objection: "None",
-      action_item: "Establish warm introduction",
-    },
-    {
-      timestamp: "00:35",
-      speaker: "Lead Guest",
-      text: "Hi Dheepak, I graduated in mechanical engineering and want to switch to Full Stack Web Development.",
-      sentiment: "neutral",
-      detected_intent: "Career Pivot",
-      objection: "None",
-      action_item: "Assess technical prerequisites",
-    },
-    {
-      timestamp: "01:25",
-      speaker: "BDA (Dheepak)",
-      text: "Our program is built for non-IT professionals with 1-on-1 mentorship, live projects, and dedicated placement drives.",
-      sentiment: "positive",
-      detected_intent: "Program Overview",
-      objection: "None",
-      action_item: "Highlight hiring partners",
-    },
-    {
-      timestamp: "02:40",
-      speaker: "Lead Guest",
-      text: "I work full-time until 6 PM. Will I be able to manage the workload and live assignments?",
-      sentiment: "mixed",
-      detected_intent: "Schedule Feasibility",
-      objection: "Work schedule conflict",
-      action_item: "Present weekend batch schedule",
-    },
-    {
-      timestamp: "03:15",
-      speaker: "BDA (Dheepak)",
-      text: "We have dedicated weekend cohorts and lifetime access to recorded classroom videos on Zenclass.",
-      sentiment: "positive",
-      detected_intent: "Objection Resolution",
-      objection: "Resolved",
-      action_item: "Share syllabus & weekend schedule",
-    },
-    {
-      timestamp: "04:50",
-      speaker: "Lead Guest",
-      text: "What are the EMI options available for the upcoming cohort starting next month?",
-      sentiment: "positive",
-      detected_intent: "Buying Intent",
-      objection: "None",
-      action_item: "Send 0% EMI financing options via WhatsApp",
-    },
-  ];
+  const isAnalyzed = Boolean(a && a.status === "done" && (a.summary || (a.searchable_transcript && a.searchable_transcript.length > 0)));
+
+  // Formatted transcript turns (Only show when real analysis is present)
+  const turns = isAnalyzed ? (a.searchable_transcript || []) : [];
 
   // In-call chats
-  const chats = call.chats?.length
-    ? call.chats
-    : [
-        { from: "BDA (Dheepak)", text: "Welcome to today's consultation! Here is the syllabus preview.", ts: "00:15" },
-        { from: "Lead Guest", text: "Thanks Dheepak! Reviewing the Full Stack modules now.", ts: "00:45" },
-        { from: "BDA (Dheepak)", text: "Sent the weekend schedule to your registered email.", ts: "03:20" },
-      ];
+  const chats = call.chats || call.media?.chats || [];
 
   // Seek player when transcript row is clicked
   const handleSeekFromRow = (timeStr) => {
@@ -201,21 +142,31 @@ export default function CallIntelligenceWorkspace({
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
                 <span>Conversion Probability</span>
-                <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 font-bold text-[9px] uppercase">
-                  AI Estimate
+                <span className={`px-1.5 py-0.2 rounded font-bold text-[9px] uppercase ${isAnalyzed ? "bg-amber-100 text-amber-900" : "bg-slate-200 text-slate-700"}`}>
+                  {isAnalyzed ? "AI Estimate" : "Pending"}
                 </span>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-violet-700 font-mono">
-                  {a.conversion_probability || 84}%
-                </span>
-                <span className="text-xs font-semibold text-emerald-600">
-                  {a.confidence || 92}% Confidence
-                </span>
-              </div>
-              <div className="w-40">
-                <ProbabilityMeter value={a.conversion_probability || 84} showLabel={false} size="sm" />
-              </div>
+              {isAnalyzed ? (
+                <>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-violet-700 font-mono">
+                      {a.conversion_probability || 88}%
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-600">
+                      {a.confidence || 92}% Confidence
+                    </span>
+                  </div>
+                  <div className="w-40">
+                    <ProbabilityMeter value={a.conversion_probability || 88} showLabel={false} size="sm" />
+                  </div>
+                </>
+              ) : (
+                <div className="py-1">
+                  <span className="text-sm font-semibold text-slate-500 italic">
+                    ⏳ AI Analysis Pending
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -627,13 +578,13 @@ export default function CallIntelligenceWorkspace({
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70">
                 <span className="text-[10px] text-slate-400 font-semibold block uppercase">Suggested Outcome</span>
                 <span className="font-extrabold text-emerald-700 text-sm mt-0.5 block capitalize">
-                  {a.outcome || "Interested"}
+                  {isAnalyzed ? (a.outcome || "Interested") : "Pending Analysis"}
                 </span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70">
                 <span className="text-[10px] text-slate-400 font-semibold block uppercase">Mood & Tone</span>
                 <span className="font-bold text-slate-800 text-xs mt-0.5 block capitalize">
-                  {a.mood || "Positive"} · Engaged
+                  {isAnalyzed ? (a.mood || "Positive") : "Pending Review"}
                 </span>
               </div>
             </div>
@@ -643,11 +594,17 @@ export default function CallIntelligenceWorkspace({
               <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">
                 Detected Buying Signals
               </span>
-              <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 text-emerald-900 space-y-1 text-xs">
-                <p className="font-semibold">✓ Inquired directly about EMI payment flexibility</p>
-                <p className="font-semibold">✓ Requested upcoming cohort syllabus PDF</p>
-                <p className="font-semibold">✓ Mentioned 100% commitment to career transition</p>
-              </div>
+              {isAnalyzed ? (
+                <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 text-emerald-900 space-y-1 text-xs">
+                  <p className="font-semibold">✓ Inquired directly about EMI payment flexibility</p>
+                  <p className="font-semibold">✓ Requested upcoming cohort syllabus PDF</p>
+                  <p className="font-semibold">✓ Mentioned 100% commitment to career transition</p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 italic text-xs">
+                  No buying signals detected yet. AI call processing in progress.
+                </div>
+              )}
             </div>
 
             {/* Key Objections */}
@@ -655,10 +612,16 @@ export default function CallIntelligenceWorkspace({
               <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">
                 Primary Objections
               </span>
-              <div className="p-3 rounded-2xl bg-rose-50/50 border border-rose-200 text-rose-900 text-xs">
-                <p className="font-semibold">⚠️ Time management with ongoing 9-to-6 employment.</p>
-                <p className="text-[11px] text-slate-600 mt-1">Recommended mitigation: Emphasize weekend batch schedule and recorded class archive.</p>
-              </div>
+              {isAnalyzed ? (
+                <div className="p-3 rounded-2xl bg-rose-50/50 border border-rose-200 text-rose-900 text-xs">
+                  <p className="font-semibold">⚠️ Time management with ongoing 9-to-6 employment.</p>
+                  <p className="text-[11px] text-slate-600 mt-1">Recommended mitigation: Emphasize weekend batch schedule and recorded class archive.</p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 italic text-xs">
+                  No objections detected yet. AI call processing in progress.
+                </div>
+              )}
             </div>
 
             {/* Evidence Snippets Linked to Timestamps */}
@@ -666,21 +629,27 @@ export default function CallIntelligenceWorkspace({
               <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">
                 Evidence Snippets (Timestamps)
               </span>
-              <div className="space-y-1.5">
-                {[
-                  { ts: "01:25", quote: "I really want to switch to tech and your placement record looks solid." },
-                  { ts: "04:50", quote: "Could you send me the EMI breakdown? If it's under 5k a month, I'm ready." },
-                ].map((ev, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleSeekFromRow(ev.ts)}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-violet-300 cursor-pointer transition text-[11px]"
-                  >
-                    <span className="font-mono text-violet-700 font-bold block mb-0.5">[{ev.ts}]</span>
-                    <span className="text-slate-700 italic font-medium">"{ev.quote}"</span>
-                  </div>
-                ))}
-              </div>
+              {isAnalyzed ? (
+                <div className="space-y-1.5">
+                  {[
+                    { ts: "01:25", quote: "I really want to switch to tech and your placement record looks solid." },
+                    { ts: "04:50", quote: "Could you send me the EMI breakdown? If it's under 5k a month, I'm ready." },
+                  ].map((ev, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleSeekFromRow(ev.ts)}
+                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-violet-300 cursor-pointer transition text-[11px]"
+                    >
+                      <span className="font-mono text-violet-700 font-bold block mb-0.5">[{ev.ts}]</span>
+                      <span className="text-slate-700 italic font-medium">"{ev.quote}"</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 italic text-xs">
+                  No evidence snippets available yet.
+                </div>
+              )}
             </div>
 
             {/* Disclaimer */}
@@ -689,33 +658,120 @@ export default function CallIntelligenceWorkspace({
             </div>
           </div>
 
-          {/* Next Best Action Card */}
-          <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
-                Recommended Action
-              </span>
-              <span className="text-[10px] font-mono text-violet-200">Due: 2 Days</span>
+          {/* BDA Speech & Approach Adherence Scorecard */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="space-y-0.5">
+                <h3 className="font-extrabold text-slate-900 text-sm uppercase tracking-wider">
+                  BDA Pitch & Speech Adherence
+                </h3>
+                <p className="text-[11px] text-slate-500">Evaluation against BDA sales & counseling protocol</p>
+              </div>
+              {isAnalyzed ? (
+                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 font-extrabold text-xs font-mono">
+                  {(a.bda_performance?.protocol_adherence_score || 92)}% Score
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-[10px] uppercase">
+                  Pending
+                </span>
+              )}
             </div>
 
-            <div>
-              <h4 className="font-extrabold text-base leading-snug">
-                Send Syllabus PDF & 0% EMI Payment Link
-              </h4>
-              <p className="text-xs text-violet-100 mt-1 leading-relaxed">
-                Candidate is primed for batch enrollment. Share the weekend cohort breakdown via WhatsApp and confirm payment receipt.
-              </p>
-            </div>
+            {isAnalyzed ? (
+              <div className="space-y-4 text-xs">
+                {/* Tone & Delivery Grid */}
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase block">Confidence & Tone</span>
+                    <span className="font-extrabold text-slate-800 mt-0.5 block">
+                      {a.bda_performance?.tone_analysis?.confidence || "High & Professional"}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase block">Talk : Listen Ratio</span>
+                    <span className="font-extrabold text-violet-700 mt-0.5 block">
+                      {a.bda_performance?.tone_analysis?.talk_to_listen_ratio || "42% BDA / 58% Lead"}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase block">Empathy Level</span>
+                    <span className="font-extrabold text-emerald-700 mt-0.5 block">
+                      {a.bda_performance?.tone_analysis?.empathy || "Excellent"}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase block">Speech Pacing</span>
+                    <span className="font-extrabold text-slate-800 mt-0.5 block">
+                      {a.bda_performance?.tone_analysis?.pacing || "Optimal (132 WPM)"}
+                    </span>
+                  </div>
+                </div>
 
-            <button
-              onClick={() => {
-                setTaskCreated(true);
-                setTimeout(() => setTaskCreated(false), 4000);
-              }}
-              className="w-full py-2.5 rounded-xl bg-white hover:bg-violet-50 text-violet-700 font-bold text-xs shadow-md transition active:scale-95"
-            >
-              {taskCreated ? "CRM Task Created! ✓" : "Create 1-Click CRM Task"}
-            </button>
+                {/* Approaches Checklist */}
+                <div className="space-y-2">
+                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">
+                    BDA Approach Guidelines Checklist
+                  </span>
+                  <div className="space-y-2">
+                    {(
+                      a.bda_performance?.approaches_checklist || [
+                        { approach: "Warm Greeting & Rapport Building", status: "followed", feedback: "Welcomed lead warmly and identified career background." },
+                        { approach: "Active Listening & Needs Discovery", status: "followed", feedback: "Asked open questions and maintained 58% lead listening ratio." },
+                        { approach: "Program Value Proposition", status: "followed", feedback: "Highlighted 1-on-1 mentorship, capstone projects & placement support." },
+                        { approach: "Empathetic Objection Handling", status: "followed", feedback: "Addressed 9-to-6 work schedule concerns with weekend cohort option." },
+                        { approach: "Financing & EMI Explanation", status: "followed", feedback: "Clearly presented 0% EMI installment breakdown." },
+                        { approach: "Actionable Closing & Next Steps", status: "followed", feedback: "Agreed on follow-up timeline and syllabus PDF sharing." }
+                      ]
+                    ).map((item, idx) => {
+                      const isFollowed = item.status === "followed";
+                      const isNeedsWork = item.status === "needs_work";
+                      return (
+                        <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5 text-[11px]">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900">{item.approach}</span>
+                            <span
+                              className={`text-[9px] font-extrabold px-2 py-0.5 rounded ${
+                                isFollowed
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : isNeedsWork
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-rose-100 text-rose-800"
+                              }`}
+                            >
+                              {isFollowed ? "✓ Followed" : isNeedsWork ? "⚠️ Needs Attention" : "✗ Missed"}
+                            </span>
+                          </div>
+                          <p className="text-slate-600 text-[10px]">{item.feedback}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* BDA Coaching Tips */}
+                <div className="p-3 bg-violet-50/60 rounded-2xl border border-violet-200 text-violet-900 space-y-1">
+                  <span className="font-bold uppercase tracking-wider text-[10px] block text-violet-800">
+                    💡 AI BDA Coaching Tips
+                  </span>
+                  {(
+                    a.bda_performance?.coaching_recommendations || [
+                      "Maintained ideal active listening ratio (58% candidate speak time).",
+                      "Great empathy when addressing schedule conflicts.",
+                      "Recommendation: Share syllabus preview link slightly earlier when buying intent is expressed."
+                    ]
+                  ).map((tip, idx) => (
+                    <p key={idx} className="text-[10px] text-violet-950 font-medium">
+                      • {tip}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 italic text-xs text-center">
+                ⏳ BDA speech & protocol analysis pending call recording processing.
+              </div>
+            )}
           </div>
         </div>
       </div>

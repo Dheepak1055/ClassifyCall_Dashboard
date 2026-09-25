@@ -57,18 +57,19 @@ class ClassifyService:
 
     async def get_meet_details(self, session_id: str, correlation_id: str = "sys") -> Dict[str, Any]:
         """
-        Authoritative endpoint to read back a meeting from Classify:
-        POST https://apiclassify.zenclass.in/getMeetDetails
+        Authoritative endpoint to read back meeting details and S3 recordings from Classify:
+        POST https://apiclassify.zenclass.in/SessionDetailsToSend
         Body: {"session": session_id, "authToken": self.auth_token}
-        Returns 100ms roomId, hostCode, studentCode, roomStatusData, transcripts, recordings.
+        Returns S3 recordings, transcripts, chats, and 100ms room codes.
         """
-        endpoint = f"{self.base_url}/getMeetDetails"
+        endpoint = f"{self.base_url}/SessionDetailsToSend"
         headers = {
             "Authorization-key": self.api_key,
             "Content-Type": "application/json"
         }
         body = {
             "session": session_id,
+            "uniqueId": session_id,
             "authToken": self.auth_token
         }
         try:
@@ -76,11 +77,20 @@ class ClassifyService:
                 resp = await client.post(endpoint, headers=headers, json=body)
             if resp.status_code == 200:
                 data = resp.json()
-                if data.get("access"):
+                if data.get("access") or data.get("data") or data.get("recordings") or data.get("details"):
                     return data
-                logger.warning(f"getMeetDetails returned access=false: {data.get('message')}", extra={"correlation_id": correlation_id, "session": session_id})
+                logger.warning(f"SessionDetailsToSend returned response: {data.get('message')}", extra={"correlation_id": correlation_id, "session": session_id})
+                return data
+            
+            # Fallback to getMeetDetails if main endpoint returns non-200
+            fallback_endpoint = f"{self.base_url}/getMeetDetails"
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp_fb = await client.post(fallback_endpoint, headers=headers, json=body)
+            if resp_fb.status_code == 200:
+                return resp_fb.json()
+
         except Exception as e:
-            logger.error(f"Error querying getMeetDetails for {session_id}: {e}", extra={"correlation_id": correlation_id})
+            logger.error(f"Error querying SessionDetailsToSend for {session_id}: {e}", extra={"correlation_id": correlation_id})
         return {}
 
     async def create_instant_meet(
@@ -191,11 +201,15 @@ class ClassifyService:
             host_code = meet_data.get("hostCode") or data.get("hostCode") or details.get("hostCode") or ""
             student_code = meet_data.get("studentCode") or data.get("studentCode") or details.get("studentCode") or ""
             
-            host_url = f"https://classify.zenclass.in/meet-dashboard-new?session={unique_id}"
+            host_url = (
+                f"https://classify.zenclass.in/meet/{room_id}?code={host_code}&role=host"
+                if room_id and host_code
+                else f"https://classify.zenclass.in/meet-dashboard-new?session={unique_id}"
+            )
             guest_url = (
                 f"https://classify.zenclass.in/meet/{room_id}?code={student_code}&role=student"
                 if room_id and student_code
-                else f"https://classify.zenclass.in/class?session={unique_id}"
+                else f"https://classify.zenclass.in/meet-dashboard-new?session={unique_id}"
             )
 
             return {
@@ -239,17 +253,31 @@ class ClassifyService:
             logger.info(f"Ingesting assets (attempt {attempt}/{max_retries}) for uniqueId: {unique_id}", extra={"correlation_id": correlation_id})
             try:
                 data = await self.get_meet_details(unique_id, correlation_id=correlation_id)
-                if data.get("access"):
-                    meet_data = data.get("data") or {}
-                    room_status = meet_data.get("roomStatusData") or {}
+                meet_data = data.get("data") or data.get("details") or data or {}
+                room_status = meet_data.get("roomStatusData") or {}
 
-                    recordings = meet_data.get("recordings") or []
-                    transcripts = meet_data.get("transcripts") or []
-                    chats = meet_data.get("chats") or []
-                    
-                    rec_url = recordings[0] if recordings else None
-                    trans_url = transcripts[0] if transcripts else None
+                recordings = (
+                    meet_data.get("recordings") or
+                    data.get("recordings") or
+                    data.get("details", {}).get("recordings") or
+                    []
+                )
+                transcripts = (
+                    meet_data.get("transcripts") or
+                    data.get("transcripts") or
+                    data.get("details", {}).get("transcripts") or
+                    []
+                )
+                chats = (
+                    meet_data.get("chats") or
+                    data.get("chats") or
+                    []
+                )
+                
+                rec_url = recordings[0] if (recordings and isinstance(recordings, list)) else (recordings if isinstance(recordings, str) else None)
+                trans_url = transcripts[0] if (transcripts and isinstance(transcripts, list)) else (transcripts if isinstance(transcripts, str) else None)
 
+                if rec_url or data.get("access"):
                     return {
                         "status": "ready" if rec_url else "processing",
                         "recording_url": rec_url,
